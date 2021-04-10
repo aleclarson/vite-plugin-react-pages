@@ -70,7 +70,9 @@ export default function pluginFactory(
         ) as MdxPlugin | undefined
 
         if (mdxPlugin?.mdxOptions) {
-          mdxPlugin.mdxOptions.remarkPlugins.push(require('remark-frontmatter'))
+          mdxPlugin.mdxOptions.remarkPlugins.unshift(
+            require('remark-frontmatter')
+          )
         } else {
           logger.warn(
             '[react-pages] Please install vite-plugin-mdx@3.1 or higher'
