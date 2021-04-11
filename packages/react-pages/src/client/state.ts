@@ -1,8 +1,6 @@
 import { useMemo } from 'react'
 import { dequal } from 'dequal'
-import type { SetAtom } from 'jotai/core/types'
-import { atom, useAtom } from 'jotai'
-import { atomFamily, useAtomValue, useUpdateAtom } from 'jotai/utils'
+import { o, useBinding, useDerived } from 'wana'
 import type { PageLoaded, PagesStaticData, Theme } from '../../client'
 
 export let useTheme: () => Theme
@@ -36,39 +34,30 @@ const initialPagePaths = Object.keys(initialPages)
 // by the same Provider. It also mutates during render, which is
 // generally discouraged, but in this case it's okay.
 if (import.meta.hot) {
-  let setTheme: SetAtom<{ Theme: Theme }> | undefined
+  const hotState = o({
+    Theme: initialTheme,
+    pages: initialPages,
+    pagePaths: initialPagePaths.sort(),
+    staticData: toStaticData(initialPages),
+    siteData: initialSiteData,
+  })
+
   import.meta.hot!.accept('/@react-pages/theme', (module) => {
-    setTheme?.({ Theme: module.default })
+    hotState.Theme = module.default
   })
-
-  const themeAtom = atom({ Theme: initialTheme })
-  useTheme = () => {
-    const [{ Theme }, set] = useAtom(themeAtom)
-    setTheme = set
-    return Theme
-  }
-
-  let setPages: SetAtom<any> | undefined
   import.meta.hot!.accept('/@react-pages/pages', (module) => {
-    setPages?.(module.default)
+    setPages(module.default)
   })
-
-  let setSiteData: SetAtom<any> | undefined
   import.meta.hot!.accept('/@react-pages/siteData', (module) => {
-    setSiteData?.(module.default)
+    hotState.siteData = module.default
   })
 
-  const pagesAtom = atom(initialPages)
-  const pagePathsAtom = atom(initialPagePaths.sort())
-  const staticDataAtom = atom(toStaticData(initialPages))
-  const siteDataAtom = atom(initialSiteData)
-
-  const setPagesAtom = atom(null, (get, set, newPages: any) => {
+  const setPages = (newPages: any) => {
     let newStaticData: Record<string, any> | undefined
 
-    const pages = get(pagesAtom)
+    const oldPages = hotState.pages
     for (const path in newPages) {
-      const page = pages[path]
+      const page = oldPages[path]
       const newPage = newPages[path]
 
       // Avoid changing the identity of `page.staticData` unless
@@ -82,74 +71,67 @@ if (import.meta.hot) {
       }
     }
 
-    // Update the `pagesAtom` every time, since no hook uses it directly.
-    set(pagesAtom, newPages)
+    // Update `pages` every time, since no hook uses it directly.
+    hotState.pages = newPages
 
     // Avoid re-rendering `useStaticData()` callers if no data changed.
-    if (newStaticData) {
-      set(staticDataAtom, {
-        ...get(staticDataAtom),
+    if (newStaticData)
+      hotState.staticData = {
+        ...hotState.staticData,
         ...newStaticData,
-      })
-    }
+      }
 
     // Avoid re-rendering `usePagePaths()` callers if no paths were added/deleted.
     const newPagePaths = Object.keys(newPages).sort()
-    if (!dequal(get(pagePathsAtom), newPagePaths)) {
-      set(pagePathsAtom, newPagePaths)
+    if (!dequal(hotState.pagePaths, newPagePaths)) {
+      hotState.pagePaths = newPagePaths
     }
-  })
-
-  const dataPathAtoms = atomFamily((path: string) => (get) => {
-    const pages = get(pagesAtom)
-    const page = pages[path] || pages['/404']
-    return page?.dataPath || null
-  })
-
-  const emptyData: any = {}
-  const staticDataAtoms = atomFamily((path: string) => (get) => {
-    const pages = get(pagesAtom)
-    const page = pages[path] || pages['/404']
-    return page?.staticData || emptyData
-  })
-
-  usePagePaths = () => {
-    setPages = useUpdateAtom(setPagesAtom)
-    return useAtomValue(pagePathsAtom)
   }
+
+  useTheme = () => useBinding(hotState, 'Theme')
+  usePagePaths = () => useBinding(hotState, 'pagePaths')
+
+  const useDataPath = (path: string) =>
+    useDerived((): string | null => {
+      const { pages } = hotState
+      const page = pages[path] || pages['/404']
+      return page?.dataPath || null
+    })
 
   // This hook uses dynamic import with a variable, which is not supported
   // by Rollup, but that's okay since HMR is for development only.
   usePageModule = (pagePath) => {
-    const dataPath = useAtomValue(dataPathAtoms(pagePath))
+    const dataPath = useBinding(useDataPath(pagePath))
     return useMemo(() => {
       return dataPath ? import(dataPath /* @vite-ignore */) : void 0
     }, [dataPath])
   }
 
-  useStaticData = (pagePath?: string, selector?: Function) => {
-    const staticData = pagePath ? staticDataAtoms(pagePath) : staticDataAtom
-    if (selector) {
-      const selection = useMemo(
-        () => atom((get) => selector(get(staticData))),
-        [staticData]
-      )
-      return useAtomValue(selection)
-    }
-    return useAtomValue(staticData)
+  const emptyData: any = {}
+  const getStaticData = (path: string) => {
+    const { pages } = hotState
+    const page = pages[path] || pages['/404']
+    return page?.staticData || emptyData
   }
 
-  useSiteData = (selector?: Function) => {
-    setSiteData = useUpdateAtom(siteDataAtom)
-    if (selector) {
-      const selection = useMemo(
-        () => atom((get) => selector(get(siteDataAtom))),
-        []
-      )
-      return useAtomValue(selection)
-    }
-    return useAtomValue(siteDataAtom)
-  }
+  useStaticData = (pagePath?: string, selector?: Function) =>
+    useBinding(
+      useDerived(() => {
+        const staticData = pagePath
+          ? getStaticData(pagePath)
+          : hotState.staticData
+
+        return selector ? selector(staticData) : staticData
+      }, [pagePath])
+    )
+
+  useSiteData = (selector?: Function) =>
+    useBinding(
+      useDerived(() => {
+        const { siteData } = hotState
+        return selector ? selector(siteData) : siteData
+      })
+    )
 }
 
 // Static mode
