@@ -16,6 +16,7 @@ import { resolveTheme } from './dynamic-modules/resolveTheme'
 const modulePrefix = '/@react-pages/'
 const pagesModuleId = modulePrefix + 'pages'
 const themeModuleId = modulePrefix + 'theme'
+const siteDataModuleId = modulePrefix + 'siteData'
 const ssrDataModuleId = modulePrefix + 'ssrData'
 
 export default function pluginFactory(
@@ -23,6 +24,7 @@ export default function pluginFactory(
     pagesDir?: string
     findPages?: FindPages
     loadPageData?: LoadPageData
+    loadSiteData?: () => object | Promise<object>
     useHashRouter?: boolean
     staticSiteGeneration?: {}
   } = {}
@@ -30,6 +32,7 @@ export default function pluginFactory(
   const {
     findPages,
     loadPageData,
+    loadSiteData,
     useHashRouter = false,
     staticSiteGeneration,
   } = opts
@@ -37,6 +40,7 @@ export default function pluginFactory(
   let isBuild: boolean
   let pagesDir: string
   let pageStrategy: PageStrategy
+  let siteData: Promise<object> | undefined
 
   return {
     name: 'vite-plugin-react-pages',
@@ -113,6 +117,11 @@ export default function pluginFactory(
           throw Error(`Page not found: ${pageId}`)
         }
         return renderOnePageData(page.data)
+      }
+      // site data
+      if (id === siteDataModuleId) {
+        siteData ??= Promise.resolve(loadSiteData ? loadSiteData() : {})
+        return `export default ${JSON.stringify(await siteData)}`
       }
       if (id === themeModuleId) {
         return `export { default } from "${await resolveTheme(pagesDir)}";`

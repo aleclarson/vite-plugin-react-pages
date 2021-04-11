@@ -1,2 +1,2 @@
 export type { Theme } from '../../client'
-export { useStaticData } from './state'
+export { useStaticData, useSiteData } from './state'

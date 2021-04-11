@@ -9,6 +9,7 @@ export let useTheme: () => Theme
 export let usePagePaths: () => string[]
 export let usePageModule: (path: string) => Promise<PageModule> | undefined
 export let useStaticData: UseStaticData
+export let useSiteData: UseSiteData
 
 interface PageModule {
   ['default']: PageLoaded
@@ -20,8 +21,14 @@ interface UseStaticData {
   <T>(path: string, selector: (staticData: Record<string, any>) => T): T
 }
 
+interface UseSiteData {
+  (): Record<string, any>
+  <T>(selector: (siteData: Record<string, any>) => T): T
+}
+
 import initialPages from '/@react-pages/pages'
 import initialTheme from '/@react-pages/theme'
+import initialSiteData from '/@react-pages/siteData'
 
 const initialPagePaths = Object.keys(initialPages)
 
@@ -46,9 +53,15 @@ if (import.meta.hot) {
     setPages?.(module.default)
   })
 
+  let setSiteData: SetAtom<any> | undefined
+  import.meta.hot!.accept('/@react-pages/siteData', (module) => {
+    setSiteData?.(module.default)
+  })
+
   const pagesAtom = atom(initialPages)
   const pagePathsAtom = atom(initialPagePaths.sort())
   const staticDataAtom = atom(toStaticData(initialPages))
+  const siteDataAtom = atom(initialSiteData)
 
   const setPagesAtom = atom(null, (get, set, newPages: any) => {
     let newStaticData: Record<string, any> | undefined
@@ -125,6 +138,18 @@ if (import.meta.hot) {
     }
     return useAtomValue(staticData)
   }
+
+  useSiteData = (selector?: Function) => {
+    setSiteData = useUpdateAtom(siteDataAtom)
+    if (selector) {
+      const selection = useMemo(
+        () => atom((get) => selector(get(siteDataAtom))),
+        []
+      )
+      return useAtomValue(selection)
+    }
+    return useAtomValue(siteDataAtom)
+  }
 }
 
 // Static mode
@@ -142,6 +167,9 @@ else {
       return selector ? selector(staticData) : staticData
     }
     return toStaticData(initialPages)
+  }
+  useSiteData = (selector?: Function) => {
+    return selector ? selector(initialSiteData) : initialSiteData
   }
 }
 
