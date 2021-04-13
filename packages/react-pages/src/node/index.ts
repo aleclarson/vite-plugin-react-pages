@@ -11,7 +11,6 @@ import {
   LoadPageData,
   PageStrategy,
 } from './dynamic-modules/PageStrategy'
-import { resolveTheme } from './dynamic-modules/resolveTheme'
 
 const modulePrefix = '/@react-pages/'
 const pagesModuleId = modulePrefix + 'pages'
@@ -41,6 +40,7 @@ export default function pluginFactory(
   let pagesDir: string
   let pageStrategy: PageStrategy
   let siteData: Promise<object> | undefined
+  let themeModulePath: string
 
   return {
     name: 'vite-plugin-react-pages',
@@ -65,6 +65,7 @@ export default function pluginFactory(
       isBuild = command === 'build'
       pagesDir = opts.pagesDir ?? path.resolve(root, 'pages')
       pageStrategy = new PageStrategy(pagesDir, findPages, loadPageData)
+      themeModulePath = path.join(root, 'theme.config.tsx')
 
       // Inject parsing logic for frontmatter if missing.
       const { devDependencies = {} } = require(path.join(root, 'package.json'))
@@ -124,7 +125,7 @@ export default function pluginFactory(
         return `export default ${JSON.stringify(await siteData)}`
       }
       if (id === themeModuleId) {
-        return `export { default } from "${await resolveTheme(pagesDir)}";`
+        return `export { default } from "${themeModulePath}";`
       }
       if (id === ssrDataModuleId) {
         return renderPageListInSSR(await pageStrategy.getPages())
