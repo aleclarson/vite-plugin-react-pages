@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { dequal } from 'dequal'
 import { o, useBinding, useDerived } from 'wana'
-import type { PageLoaded, PagesStaticData, Theme } from '../../client'
+import type { PageLoaded, PagesStaticData, Theme } from '../../types'
 
 export let useTheme: () => Theme
 export let usePagePaths: () => string[]

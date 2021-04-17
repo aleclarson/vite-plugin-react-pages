@@ -150,4 +150,4 @@ export type {
   LoadState,
   PagesLoaded,
   PagesStaticData,
-} from '../../client'
+} from '../../types'
