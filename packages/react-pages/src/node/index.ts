@@ -84,6 +84,12 @@ export default function pluginFactory(
           )
         }
       }
+
+      if (isBuild) {
+        this.buildEnd = () => {
+          pageStrategy.close()
+        }
+      }
     },
     configureServer({ watcher, moduleGraph }) {
       const reloadVirtualModule = (moduleId: string) => {
