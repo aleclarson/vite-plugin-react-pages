@@ -1,5 +1,7 @@
 import React from 'react'
 
+export * from './dist/client'
+
 /** The type of a theme. */
 export type Theme = React.ComponentType<ThemeProps>
 
