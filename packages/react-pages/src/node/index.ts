@@ -11,6 +11,7 @@ import {
   LoadPageData,
   PageStrategy,
 } from './dynamic-modules/PageStrategy'
+import { rehypePages } from './rehypePages'
 
 const modulePrefix = '/@react-pages/'
 const pagesModuleId = modulePrefix + 'pages'
@@ -27,7 +28,7 @@ export default function pluginFactory(
     useHashRouter?: boolean
     staticSiteGeneration?: {}
   } = {}
-): Plugin {
+) {
   const {
     findPages,
     loadPageData,
@@ -42,8 +43,8 @@ export default function pluginFactory(
   let siteData: Promise<object> | undefined
   let themeModulePath: string
 
-  return {
-    name: 'vite-plugin-react-pages',
+  const loader: Plugin = {
+    name: 'react-pages:loader',
     config: () => ({
       resolve: {
         alias: {
@@ -82,12 +83,6 @@ export default function pluginFactory(
           logger.warn(
             '[react-pages] Please install vite-plugin-mdx@3.1 or higher'
           )
-        }
-      }
-
-      if (isBuild) {
-        this.buildEnd = () => {
-          pageStrategy.close()
         }
       }
     },
@@ -143,6 +138,55 @@ export default function pluginFactory(
       pageStrategy.close()
     },
   }
+
+  const emitter: Plugin = {
+    name: 'react-pages:emitter',
+    enforce: 'post',
+    configResolved({ root, base }) {
+      this.generateBundle = async function (_, bundle) {
+        const chunks = Object.values(bundle).filter(
+          (asset) => asset.type == 'chunk'
+        ) as import('rollup').OutputChunk[]
+
+        const [entry] = Array.from(this.getModuleIds())
+        const entryId = path.relative(root, entry)
+        const entryHtml = bundle[entryId] as import('rollup').OutputAsset
+        const entryJs = chunks.find((chunk) => chunk.facadeModuleId == entry)!
+
+        const rehype = require('rehype') as typeof import('rehype')
+        const compiler = rehype().use(rehypePages, base, entryJs.fileName)
+
+        const pages = await pageStrategy.getPages()
+        pageStrategy.close()
+
+        for (const pageId in pages) {
+          if (pageId == '/') {
+            continue
+          }
+
+          const pageModuleId = pagesModuleId + pageId
+          const pageModule = chunks.find(
+            (chunk) => chunk.facadeModuleId == pageModuleId
+          )!
+
+          const fileName =
+            pageId.slice(1) + (pageId == '/404' ? '.html' : '/index.html')
+          const compiled = await compiler.process({
+            contents: entryHtml.source,
+            data: { pageId, pageModule },
+          })
+
+          this.emitFile({
+            type: 'asset',
+            fileName,
+            source: compiled.contents + '',
+          })
+        }
+      }
+    },
+  }
+
+  return [loader, emitter]
 }
 
 export type {
