@@ -12,29 +12,24 @@ export interface PagesData {
 }
 
 export async function renderPageList(pagesData: PagesData, isBuild: boolean) {
-  const addPagesData = Object.entries(pagesData).map(
-    ([pageId, { staticData }]) => {
-      let subPath = pageId
-      if (subPath === '/') {
-        // import("/@react-pages/pages/") would make vite confused
-        // so we change the sub path
-        subPath = '/__index'
-      }
-      const dataProperty = isBuild
-        ? `data = () => import("/@react-pages/pages${subPath}")`
-        : `dataPath = "/@react-pages/pages${subPath}"`
-      const code = `
-pages["${pageId}"] = {};
-pages["${pageId}"].${dataProperty};
-pages["${pageId}"].staticData = ${JSON.stringify(staticData)};`
-      return code
-    }
-  )
-  return `
-const pages = {};
-${addPagesData.join('\n')}
-export default pages;
-`
+  const lines: string[] = ['export default {']
+  for (const pageId in pagesData) {
+    const staticData = JSON.stringify(pagesData[pageId].staticData)
+    const dataPath =
+      '/@react-pages/pages' + pageId + (pageId == '/' ? '__index' : '')
+    const dataProperty = isBuild
+      ? `data: () => import("${dataPath}")`
+      : `dataPath: "${dataPath}"`
+
+    lines.push(
+      `  "${pageId}": {`,
+      `    staticData: ${staticData},`,
+      `    ${dataProperty},`,
+      `  },`
+    )
+  }
+  lines.push('}')
+  return lines.join('\n')
 }
 
 export async function renderPageListInSSR(pagesData: PagesData) {
