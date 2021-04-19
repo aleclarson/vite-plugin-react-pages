@@ -46,6 +46,9 @@ export default function pluginFactory(
   const loader: Plugin = {
     name: 'react-pages:loader',
     config: () => ({
+      optimizeDeps: {
+        exclude: ['vite-plugin-react-pages/client'],
+      },
       resolve: {
         alias: {
           '/@pages-infra': path.join(__dirname, '../client/'),
