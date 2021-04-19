@@ -3,7 +3,7 @@ import { dequal } from 'dequal'
 import { o, useBinding, useDerived } from 'wana'
 import type { PageLoaded, PagesStaticData, Theme } from '../../types'
 
-export let useTheme: () => Theme
+export let useTheme: () => Promise<Theme>
 export let usePagePaths: () => string[]
 export let usePageModule: (path: string) => Promise<PageModule> | undefined
 export let useStaticData: UseStaticData
@@ -24,8 +24,8 @@ interface UseSiteData {
   <T>(selector: (siteData: Record<string, any>) => T): T
 }
 
-import initialPages from '/@react-pages/pages'
 import initialTheme from '/@react-pages/theme'
+import initialPages from '/@react-pages/pages'
 import initialSiteData from '/@react-pages/siteData'
 
 const initialPagePaths = Object.keys(initialPages)
@@ -35,7 +35,7 @@ const initialPagePaths = Object.keys(initialPages)
 // generally discouraged, but in this case it's okay.
 if (import.meta.hot) {
   const hotState = o({
-    Theme: initialTheme,
+    theme: initialTheme(),
     pages: initialPages,
     pagePaths: initialPagePaths.sort(),
     staticData: toStaticData(initialPages),
@@ -43,7 +43,7 @@ if (import.meta.hot) {
   })
 
   import.meta.hot!.accept('/@react-pages/theme', (module) => {
-    hotState.Theme = module.default
+    hotState.theme = module.default()
   })
   import.meta.hot!.accept('/@react-pages/pages', (module) => {
     setPages(module.default)
@@ -88,7 +88,7 @@ if (import.meta.hot) {
     }
   }
 
-  useTheme = () => useBinding(hotState, 'Theme')
+  useTheme = () => useBinding(hotState, 'theme')
   usePagePaths = () => useBinding(hotState, 'pagePaths')
 
   const useDataPath = (path: string) =>
@@ -136,7 +136,7 @@ if (import.meta.hot) {
 
 // Static mode
 else {
-  useTheme = () => initialTheme
+  useTheme = () => useMemo(initialTheme, [])
   usePagePaths = () => initialPagePaths
   usePageModule = (path) => {
     const page = initialPages[path] || initialPages['/404']

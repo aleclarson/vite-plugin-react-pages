@@ -134,7 +134,7 @@ export default function pluginFactory(
 
         // Render the theme module.
         if (id === themeModuleId) {
-          return `export { default } from "/@fs${themeModulePath}";`
+          return `export default () => import("/@fs${themeModulePath}").then(module => module.default)`
         }
 
         if (id === ssrDataModuleId) {
