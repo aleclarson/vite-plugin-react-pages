@@ -105,7 +105,8 @@ export default function pluginFactory(
         )
     },
     resolveId(id) {
-      return id.startsWith(modulePrefix) ? id + '.js' : undefined
+      if (id.startsWith(modulePrefix))
+        return id.endsWith('.js') ? id : id + '.js'
     },
     async load(id) {
       if (id.startsWith(modulePrefix)) {
