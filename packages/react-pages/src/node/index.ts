@@ -102,34 +102,44 @@ export default function pluginFactory(
         )
     },
     resolveId(id) {
-      return id.startsWith(modulePrefix) ? id : undefined
+      return id.startsWith(modulePrefix) ? id + '.js' : undefined
     },
     async load(id) {
-      // page list
-      if (id === pagesModuleId) {
-        return renderPageList(await pageStrategy.getPages(), isBuild)
-      }
-      // one page data
-      if (id.startsWith(pagesModuleId + '/')) {
-        let pageId = id.slice(pagesModuleId.length)
-        if (pageId === '/__index') pageId = '/'
-        const pages = await pageStrategy.getPages()
-        const page = pages[pageId]
-        if (!page) {
-          throw Error(`Page not found: ${pageId}`)
+      if (id.startsWith(modulePrefix)) {
+        // Strip the ".js" suffix
+        id = id.slice(0, -3)
+
+        // Render the page manifest.
+        if (id === pagesModuleId) {
+          return renderPageList(await pageStrategy.getPages(), isBuild)
         }
-        return renderOnePageData(page.data)
-      }
-      // site data
-      if (id === siteDataModuleId) {
-        siteData ??= Promise.resolve(loadSiteData ? loadSiteData() : {})
-        return `export default ${JSON.stringify(await siteData)}`
-      }
-      if (id === themeModuleId) {
-        return `export { default } from "${themeModulePath}";`
-      }
-      if (id === ssrDataModuleId) {
-        return renderPageListInSSR(await pageStrategy.getPages())
+
+        // Render a page module.
+        if (id.startsWith(pagesModuleId + '/')) {
+          let pageId = id.slice(pagesModuleId.length)
+          if (pageId === '/__index') pageId = '/'
+          const pages = await pageStrategy.getPages()
+          const page = pages[pageId]
+          if (!page) {
+            throw Error(`Page not found: ${pageId}`)
+          }
+          return renderOnePageData(page.data)
+        }
+
+        // Render the site-wide data.
+        if (id === siteDataModuleId) {
+          siteData ??= Promise.resolve(loadSiteData ? loadSiteData() : {})
+          return `export default ${JSON.stringify(await siteData)}`
+        }
+
+        // Render the theme module.
+        if (id === themeModuleId) {
+          return `export { default } from "${themeModulePath}";`
+        }
+
+        if (id === ssrDataModuleId) {
+          return renderPageListInSSR(await pageStrategy.getPages())
+        }
       }
     },
     // @ts-expect-error
