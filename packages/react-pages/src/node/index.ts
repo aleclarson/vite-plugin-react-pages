@@ -178,7 +178,7 @@ export default function pluginFactory(
             continue
           }
 
-          const pageModuleId = pagesModuleId + pageId
+          const pageModuleId = pagesModuleId + pageId + '.js'
           const pageModule = chunks.find(
             (chunk) => chunk.facadeModuleId == pageModuleId
           )!
