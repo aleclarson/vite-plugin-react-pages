@@ -4,7 +4,7 @@ import type { LoadState } from '../../types'
 import { dataCacheCtx, setDataCacheCtx } from './ssr/ctx'
 import { usePageModule } from './state'
 
-export default function useAppState(routePath: string) {
+export default function usePageLoader(routePath: string) {
   const dataCache = useContext(dataCacheCtx)
   const setDataCache = useContext(setDataCacheCtx)
 
