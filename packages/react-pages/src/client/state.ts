@@ -16,12 +16,16 @@ interface PageModule {
 interface UseStaticData {
   (): PagesStaticData
   (path: string): Record<string, any>
-  <T>(path: string, selector: (staticData: Record<string, any>) => T): T
+  <T>(
+    path: string,
+    selector: (staticData: Record<string, any>) => T,
+    deps?: any[]
+  ): T
 }
 
 interface UseSiteData {
   (): Record<string, any>
-  <T>(selector: (siteData: Record<string, any>) => T): T
+  <T>(selector: (siteData: Record<string, any>) => T, deps?: any[]): T
 }
 
 import initialTheme from '/@react-pages/theme'
@@ -142,16 +146,20 @@ else {
     const page = initialPages[path] || initialPages['/404']
     return useMemo(() => page?.data(), [page])
   }
-  useStaticData = (path?: string, selector?: Function) => {
+  useStaticData = (path?: string, selector?: Function, deps?: any[]) => {
     if (path) {
       const page = initialPages[path] || initialPages['/404']
       const staticData = page?.staticData || {}
-      return selector ? selector(staticData) : staticData
+      return selector
+        ? useMemo(() => selector(staticData), deps || [])
+        : staticData
     }
     return toStaticData(initialPages)
   }
-  useSiteData = (selector?: Function) => {
-    return selector ? selector(initialSiteData) : initialSiteData
+  useSiteData = (selector?: Function, deps?: any[]) => {
+    return selector
+      ? useMemo(() => selector(initialSiteData), deps || [])
+      : initialSiteData
   }
 }
 
