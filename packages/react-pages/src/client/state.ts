@@ -100,7 +100,7 @@ if (import.meta.hot) {
       const { pages } = hotState
       const page = pages[path] || pages['/404']
       return page?.dataPath || null
-    })
+    }, [path])
 
   // This hook uses dynamic import with a variable, which is not supported
   // by Rollup, but that's okay since HMR is for development only.
