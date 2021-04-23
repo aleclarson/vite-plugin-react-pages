@@ -32,9 +32,11 @@ export class PageStrategy extends EventEmitter {
 
     // The "change" event is for HMR updates to each page.
     const changedPages = new Set<string>()
+    const deletedPages = new Set<string>()
     const emitChange = debounce(() => {
       this.emit('change', Array.from(changedPages))
       changedPages.clear()
+      deletedPages.clear()
     }, 100)
 
     const helpers: PageHelpers = {
@@ -97,7 +99,7 @@ export class PageStrategy extends EventEmitter {
         dataKeys.push(key)
       }
 
-      if (existingPage) {
+      if (existingPage || deletedPages.delete(pageId)) {
         changedPages.add(pageId)
         emitChange()
       }
@@ -115,6 +117,7 @@ export class PageStrategy extends EventEmitter {
         changedPages.add(pageId)
         emitChange()
       } else {
+        deletedPages.add(pageId)
         delete pageCache[pageId]
       }
     }
