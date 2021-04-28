@@ -46,13 +46,13 @@ if (import.meta.hot) {
     siteData: initialSiteData,
   })
 
-  import.meta.hot!.accept('/@react-pages/theme', (module) => {
+  import.meta.hot!.accept('/@react-pages/theme.js', (module) => {
     hotState.theme = module.default()
   })
-  import.meta.hot!.accept('/@react-pages/pages', (module) => {
+  import.meta.hot!.accept('/@react-pages/pages.js', (module) => {
     setPages(module.default)
   })
-  import.meta.hot!.accept('/@react-pages/siteData', (module) => {
+  import.meta.hot!.accept('/@react-pages/siteData.js', (module) => {
     hotState.siteData = module.default
   })
 
