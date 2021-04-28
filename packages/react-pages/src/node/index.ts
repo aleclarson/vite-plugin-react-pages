@@ -91,7 +91,7 @@ export default function pluginFactory(
     },
     configureServer({ watcher, moduleGraph }) {
       const reloadVirtualModule = (moduleId: string) => {
-        const module = moduleGraph.getModuleById(moduleId)
+        const module = moduleGraph.getModuleById((moduleId += '.js'))
         if (module) {
           moduleGraph.invalidateModule(module)
           watcher.emit('change', moduleId)
