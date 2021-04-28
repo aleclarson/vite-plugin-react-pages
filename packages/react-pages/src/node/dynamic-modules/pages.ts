@@ -14,17 +14,21 @@ export interface PagesData {
 export async function renderPageList(pagesData: PagesData, isBuild: boolean) {
   const lines: string[] = ['export default {']
   for (const pageId in pagesData) {
-    const staticData = JSON.stringify(pagesData[pageId].staticData)
-    const dataPath =
-      '/@react-pages/pages' + pageId + (pageId == '/' ? '__index' : '')
-    const dataProperty = isBuild
-      ? `data: () => import("${dataPath}")`
-      : `dataPath: "${dataPath}"`
-
+    const pageUri = pageId.slice(1) + (pageId == '/' ? '__index' : '')
+    const dataPath = `/@react-pages/pages/${pageUri}.js`
+    const props: string[] = [
+      `staticData: ${JSON.stringify(pagesData[pageId].staticData)}`,
+      `data: () => import("${dataPath}")`,
+    ]
+    // To avoid reloading the active page when another page is changed,
+    // we want to reload only if the `dataPath` of the active page has
+    // changed. If not, let Fast Refresh work its magic.
+    if (!isBuild) {
+      props.push(`dataPath: "${dataPath}"`)
+    }
     lines.push(
       `  "${pageId}": {`,
-      `    staticData: ${staticData},`,
-      `    ${dataProperty},`,
+      ...props.map((prop) => `    ${prop},`),
       `  },`
     )
   }
